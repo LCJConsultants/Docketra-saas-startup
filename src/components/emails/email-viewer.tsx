@@ -1,0 +1,81 @@
+"use client";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Reply, Forward, Paperclip, ExternalLink } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
+import type { Email } from "@/types";
+import Link from "next/link";
+
+interface EmailViewerProps {
+  email: Email;
+}
+
+export function EmailViewer({ email }: EmailViewerProps) {
+  return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex items-start justify-between">
+          <h2 className="text-lg font-semibold">{email.subject || "(no subject)"}</h2>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm">
+              <Reply className="h-4 w-4 mr-1" />
+              Reply
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Forward className="h-4 w-4 mr-1" />
+              Forward
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">From:</span>{" "}
+            <span className="font-medium">{email.from_address}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">To:</span>{" "}
+            <span>{email.to_addresses.join(", ")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {email.sent_at && <span>{formatDateTime(email.sent_at)}</span>}
+          {email.case_id && (
+            <Link href={`/cases/${email.case_id}`} className="flex items-center gap-1 hover:text-primary">
+              <ExternalLink className="h-3 w-3" />
+              View Case
+            </Link>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {email.body_html ? (
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: email.body_html }}
+          />
+        ) : (
+          <pre className="whitespace-pre-wrap text-sm">{email.body_text}</pre>
+        )}
+
+        {email.attachments && email.attachments.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-xs text-muted-foreground font-medium mb-2 flex items-center gap-1">
+              <Paperclip className="h-3 w-3" />
+              Attachments ({email.attachments.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {email.attachments.map((att, idx) => (
+                <Badge key={idx} variant="outline" className="gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  {att.name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
