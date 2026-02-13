@@ -21,6 +21,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { useUnreadEmails } from "@/hooks/use-unread-emails";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -35,9 +37,14 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onAiToggle?: () => void;
+}
+
+export function Sidebar({ onAiToggle }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { unreadCount } = useUnreadEmails();
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -62,6 +69,7 @@ export function Sidebar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                onClick={onAiToggle}
                 className={cn(
                   "flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-colors bg-accent/20 hover:bg-accent/30 text-accent",
                   collapsed && "justify-center px-0"
@@ -87,7 +95,7 @@ export function Sidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
                       isActive
                         ? "bg-sidebar-accent text-white"
                         : "text-white/70 hover:bg-sidebar-accent/50 hover:text-white",
@@ -95,11 +103,23 @@ export function Sidebar() {
                     )}
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>{item.name}</span>}
+                    {!collapsed && <span className="flex-1">{item.name}</span>}
+                    {item.name === "Emails" && unreadCount > 0 && (
+                      collapsed ? (
+                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+                      ) : (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] flex items-center justify-center text-[10px] px-1.5">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Badge>
+                      )
+                    )}
                   </Link>
                 </TooltipTrigger>
                 {collapsed && (
-                  <TooltipContent side="right">{item.name}</TooltipContent>
+                  <TooltipContent side="right">
+                    {item.name}
+                    {item.name === "Emails" && unreadCount > 0 && ` (${unreadCount})`}
+                  </TooltipContent>
                 )}
               </Tooltip>
             );

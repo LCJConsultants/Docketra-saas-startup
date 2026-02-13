@@ -40,7 +40,7 @@ export default async function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <EmptyState
-          icon={Bell}
+          icon={<Bell className="h-8 w-8 text-muted-foreground" />}
           title="No notifications"
           description="You're all caught up! Notifications about deadlines, events, and AI tasks will appear here."
         />

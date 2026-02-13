@@ -55,7 +55,7 @@ export default async function InvoicesPage({
 
       {invoices.length === 0 ? (
         <EmptyState
-          icon={Receipt}
+          icon={<Receipt className="h-8 w-8 text-muted-foreground" />}
           title="No invoices yet"
           description="Create your first invoice to start billing clients."
           action={

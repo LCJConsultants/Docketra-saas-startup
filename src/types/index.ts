@@ -18,6 +18,10 @@ export interface Profile {
   stripe_customer_id: string | null;
   subscription_status: SubscriptionStatus;
   subscription_plan: string | null;
+  google_refresh_token: string | null;
+  gmail_refresh_token: string | null;
+  outlook_refresh_token: string | null;
+  dropbox_refresh_token: string | null;
   notification_preferences: {
     email: boolean;
     in_app: boolean;
@@ -203,17 +207,29 @@ export interface Email {
   user_id: string;
   case_id: string | null;
   client_id: string | null;
-  external_id: string | null;
-  provider: "gmail" | "outlook" | null;
+  message_id: string | null;
+  thread_id: string | null;
+  subject: string | null;
   from_address: string;
   to_addresses: string[];
-  subject: string | null;
+  cc_addresses: string[] | null;
+  bcc_addresses: string[] | null;
   body_text: string | null;
   body_html: string | null;
+  snippet: string | null;
+  is_read: boolean;
+  is_starred: boolean;
   direction: "inbound" | "outbound";
+  provider: "gmail" | "outlook" | null;
+  provider_email_id: string | null;
+  labels: string[] | null;
+  has_attachments: boolean;
+  ai_summary: string | null;
   sent_at: string | null;
+  received_at: string | null;
   attachments: Array<{ name: string; size: number; storage_path: string }> | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Subscription {

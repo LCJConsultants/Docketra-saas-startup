@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useEffect } from "react";
 import { X, Send, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useAiChat } from "@/hooks/use-ai-chat";
 
 interface AIChatPanelProps {
   open: boolean;
@@ -13,8 +14,20 @@ interface AIChatPanelProps {
 }
 
 export function AIChatPanel({ open, onClose }: AIChatPanelProps) {
-  const [input, setInput] = useState("");
-  const [isLoading] = useState(false);
+  const { messages, sendMessage, isLoading, error, input, setInput } = useAiChat();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    sendMessage(input);
+    setInput("");
+  };
 
   if (!open) return null;
 
@@ -32,15 +45,48 @@ export function AIChatPanel({ open, onClose }: AIChatPanelProps) {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="flex flex-col items-center justify-center h-full text-center px-4 py-12">
-          <div className="rounded-full bg-accent/10 p-4 mb-4">
-            <Sparkles className="h-8 w-8 text-accent" />
-          </div>
-          <h3 className="font-semibold text-lg">Docketra AI</h3>
-          <p className="text-sm text-muted-foreground mt-2">
-            Ask me to draft documents, look up case details, summarize files, or help with any legal task.
-          </p>
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="p-4 space-y-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center px-4 py-12">
+              <div className="rounded-full bg-accent/10 p-4 mb-4">
+                <Sparkles className="h-8 w-8 text-accent" />
+              </div>
+              <h3 className="font-semibold text-lg">Docketra AI</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Ask me to draft documents, look up case details, summarize files, or help with any legal task.
+              </p>
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex",
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  )}
+                >
+                  {msg.content || (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+
+          {error && (
+            <div className="rounded-lg bg-destructive/10 text-destructive px-3 py-2 text-sm">
+              {error}
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -56,12 +102,14 @@ export function AIChatPanel({ open, onClose }: AIChatPanelProps) {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                handleSend();
               }
             }}
           />
           <Button
             size="icon"
             disabled={!input.trim() || isLoading}
+            onClick={handleSend}
             className={cn("shrink-0", isLoading && "opacity-50")}
           >
             {isLoading ? (

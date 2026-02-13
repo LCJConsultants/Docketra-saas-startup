@@ -62,13 +62,10 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative" onClick={() => router.push("/notifications")}>
           <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-primary">
-            3
-          </span>
         </Button>
 
         {/* User menu */}

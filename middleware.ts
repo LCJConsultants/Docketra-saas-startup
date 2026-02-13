@@ -38,7 +38,10 @@ export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/login", "/signup", "/forgot-password", "/callback"];
   const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith("/api/stripe/webhook")
+    (route) => pathname === route ||
+    pathname.startsWith("/api/stripe/webhook") ||
+    pathname.startsWith("/api/integrations/gmail/webhook") ||
+    pathname.startsWith("/api/integrations/outlook/webhook")
   );
 
   // If not authenticated and trying to access protected route

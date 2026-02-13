@@ -62,6 +62,35 @@ export async function updateNotificationPrefsAction(formData: FormData) {
   revalidatePath("/settings/notifications");
 }
 
+export async function disconnectIntegration(
+  provider: "google" | "outlook" | "dropbox"
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const updates: Record<string, null> = {};
+  if (provider === "google") {
+    updates.google_refresh_token = null;
+    updates.gmail_refresh_token = null;
+  } else if (provider === "outlook") {
+    updates.outlook_refresh_token = null;
+  } else if (provider === "dropbox") {
+    updates.dropbox_refresh_token = null;
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", user.id);
+
+  if (error) throw error;
+
+  revalidatePath("/settings/integrations");
+}
+
 export async function getProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -7,6 +7,7 @@ export function useAiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [input, setInput] = useState("");
 
   const sendMessage = useCallback(
     async (content: string, caseId?: string) => {
@@ -93,5 +94,5 @@ export function useAiChat() {
     [messages]
   );
 
-  return { messages, sendMessage, isLoading, error };
+  return { messages, sendMessage, isLoading, error, input, setInput };
 }

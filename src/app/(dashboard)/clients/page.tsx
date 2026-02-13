@@ -26,7 +26,7 @@ export default async function ClientsPage() {
 
       {clients.length === 0 ? (
         <EmptyState
-          icon={Users}
+          icon={<Users className="h-8 w-8 text-muted-foreground" />}
           title="No clients yet"
           description="Add your first client to get started with case management."
           action={

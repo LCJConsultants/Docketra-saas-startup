@@ -76,7 +76,7 @@ export default async function DocumentsPage({
       {/* Document grid or empty state */}
       {documents.length === 0 ? (
         <EmptyState
-          icon={FileText}
+          icon={<FileText className="h-8 w-8 text-muted-foreground" />}
           title="No documents found"
           description="Upload your first document to get started with document management."
           action={

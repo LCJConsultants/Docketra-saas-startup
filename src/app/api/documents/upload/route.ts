@@ -87,6 +87,43 @@ export async function POST(request: Request) {
       );
     }
 
+    // Optionally upload to Google Drive if connected and case has a Drive folder
+    if (caseId && document) {
+      try {
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("google_refresh_token")
+          .eq("id", user.id)
+          .single();
+
+        if (userProfile?.google_refresh_token) {
+          const { data: caseData } = await supabase
+            .from("cases")
+            .select("drive_folder_id")
+            .eq("id", caseId)
+            .single();
+
+          if (caseData?.drive_folder_id) {
+            const { uploadToDrive } = await import("@/lib/google");
+            const arrayBuffer = await file.arrayBuffer();
+            const driveFileId = await uploadToDrive(
+              userProfile.google_refresh_token,
+              file.name,
+              Buffer.from(arrayBuffer),
+              file.type,
+              caseData.drive_folder_id
+            );
+            await supabase
+              .from("documents")
+              .update({ drive_file_id: driveFileId })
+              .eq("id", document.id);
+          }
+        }
+      } catch (driveErr) {
+        console.error("Drive upload failed (non-critical):", driveErr);
+      }
+    }
+
     return NextResponse.json(document, { status: 201 });
   } catch (err) {
     console.error("Upload route error:", err);

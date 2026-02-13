@@ -6,8 +6,9 @@ import { CaseTabs } from "@/components/cases/case-tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Sparkles, User, Scale, Gavel, Users } from "lucide-react";
+import { Pencil, User, Scale, Gavel, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { QuickActions } from "@/components/ai/quick-actions";
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -45,20 +46,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             : `Opened ${formatDate(caseData.date_opened)}`
         }
         action={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              AI Actions
+          <Link href={`/cases/${caseData.id}/edit`}>
+            <Button variant="outline">
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
             </Button>
-            <Link href={`/cases/${caseData.id}/edit`}>
-              <Button variant="outline">
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </Link>
-          </div>
+          </Link>
         }
       />
+
+      {/* AI Quick Actions */}
+      <QuickActions caseId={caseData.id} caseTitle={caseData.title} />
 
       {/* Case Info Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

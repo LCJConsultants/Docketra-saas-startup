@@ -1,32 +1,176 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+} from "docx";
 
-export async function POST() {
-  try {
-    const supabase = await createClient();
+function parseContentToDocx(content: string): Paragraph[] {
+  const lines = content.split("\n");
+  const paragraphs: Paragraph[] = [];
 
-    // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+  for (const line of lines) {
+    const trimmed = line.trim();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+    // Empty line = spacing paragraph
+    if (!trimmed) {
+      paragraphs.push(new Paragraph({ spacing: { after: 120 } }));
+      continue;
     }
 
-    // Placeholder export endpoint
-    return NextResponse.json({
-      message: "Export endpoint ready",
+    // Markdown headings
+    if (trimmed.startsWith("### ")) {
+      paragraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_3,
+          children: [new TextRun({ text: trimmed.replace(/^###\s*/, ""), bold: true, size: 24 })],
+          spacing: { before: 240, after: 120 },
+        })
+      );
+    } else if (trimmed.startsWith("## ")) {
+      paragraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          children: [new TextRun({ text: trimmed.replace(/^##\s*/, ""), bold: true, size: 28 })],
+          spacing: { before: 300, after: 120 },
+        })
+      );
+    } else if (trimmed.startsWith("# ")) {
+      paragraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          children: [new TextRun({ text: trimmed.replace(/^#\s*/, ""), bold: true, size: 32 })],
+          spacing: { before: 360, after: 200 },
+          alignment: AlignmentType.CENTER,
+        })
+      );
+    } else if (trimmed.startsWith("---") || trimmed.startsWith("***")) {
+      // Horizontal rule - add spacing
+      paragraphs.push(new Paragraph({ spacing: { before: 200, after: 200 } }));
+    } else {
+      // Regular paragraph - handle bold/italic markdown
+      const runs: TextRun[] = [];
+      let remaining = trimmed;
+
+      // Simple markdown bold/italic parsing
+      const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_)/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(remaining)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          runs.push(new TextRun({ text: remaining.slice(lastIndex, match.index), size: 24 }));
+        }
+
+        if (match[2]) {
+          // Bold italic ***text***
+          runs.push(new TextRun({ text: match[2], bold: true, italics: true, size: 24 }));
+        } else if (match[3]) {
+          // Bold **text**
+          runs.push(new TextRun({ text: match[3], bold: true, size: 24 }));
+        } else if (match[4]) {
+          // Italic *text*
+          runs.push(new TextRun({ text: match[4], italics: true, size: 24 }));
+        } else if (match[5]) {
+          // Bold __text__
+          runs.push(new TextRun({ text: match[5], bold: true, size: 24 }));
+        } else if (match[6]) {
+          // Italic _text_
+          runs.push(new TextRun({ text: match[6], italics: true, size: 24 }));
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      // Add remaining text
+      if (lastIndex < remaining.length) {
+        runs.push(new TextRun({ text: remaining.slice(lastIndex), size: 24 }));
+      }
+
+      if (runs.length === 0) {
+        runs.push(new TextRun({ text: trimmed, size: 24 }));
+      }
+
+      paragraphs.push(
+        new Paragraph({
+          children: runs,
+          spacing: { after: 120 },
+        })
+      );
+    }
+  }
+
+  return paragraphs;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { documentId } = await req.json();
+
+    if (!documentId) {
+      return NextResponse.json({ error: "Document ID required" }, { status: 400 });
+    }
+
+    // Fetch the document
+    const { data: doc, error } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", documentId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error || !doc) {
+      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+
+    const content = doc.ocr_text || "";
+    const paragraphs = parseContentToDocx(content);
+
+    const docx = new Document({
+      creator: "Docketra",
+      title: doc.title,
+      description: "Generated by Docketra AI",
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1440, // 1 inch
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
+          children: paragraphs,
+        },
+      ],
+    });
+
+    const buffer = await Packer.toBuffer(docx);
+
+    const fileName = doc.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_") + ".docx";
+
+    return new Response(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+      },
     });
   } catch (err) {
     console.error("Export route error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

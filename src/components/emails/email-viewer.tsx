@@ -1,33 +1,67 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Reply, Forward, Paperclip, ExternalLink } from "lucide-react";
+import { Reply, Forward, Paperclip, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Email } from "@/types";
 import Link from "next/link";
 
 interface EmailViewerProps {
-  email: Email;
+  emails: Email[];
+  onReply?: (email: Email) => void;
+  onForward?: (email: Email) => void;
 }
 
-export function EmailViewer({ email }: EmailViewerProps) {
+function SingleEmailView({
+  email,
+  isLatest,
+  defaultExpanded,
+  onReply,
+  onForward,
+}: {
+  email: Email;
+  isLatest: boolean;
+  defaultExpanded: boolean;
+  onReply?: (email: Email) => void;
+  onForward?: (email: Email) => void;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
   return (
     <Card>
-      <CardHeader className="space-y-3">
+      <CardHeader
+        className={cn("space-y-3", !isLatest && "cursor-pointer")}
+        onClick={!isLatest ? () => setExpanded(!expanded) : undefined}
+      >
         <div className="flex items-start justify-between">
-          <h2 className="text-lg font-semibold">{email.subject || "(no subject)"}</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm">
-              <Reply className="h-4 w-4 mr-1" />
-              Reply
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Forward className="h-4 w-4 mr-1" />
-              Forward
-            </Button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {!isLatest && (
+              expanded ? (
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )
+            )}
+            <h2 className={cn("font-semibold truncate", isLatest ? "text-lg" : "text-sm")}>
+              {email.subject || "(no subject)"}
+            </h2>
           </div>
+          {isLatest && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="ghost" size="sm" onClick={() => onReply?.(email)}>
+                <Reply className="h-4 w-4 mr-1" />
+                Reply
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onForward?.(email)}>
+                <Forward className="h-4 w-4 mr-1" />
+                Forward
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div>
@@ -49,33 +83,61 @@ export function EmailViewer({ email }: EmailViewerProps) {
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        {email.body_html ? (
-          <div
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: email.body_html }}
-          />
-        ) : (
-          <pre className="whitespace-pre-wrap text-sm">{email.body_text}</pre>
-        )}
+      {expanded && (
+        <CardContent>
+          {email.body_html ? (
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: email.body_html }}
+            />
+          ) : (
+            <pre className="whitespace-pre-wrap text-sm">{email.body_text}</pre>
+          )}
 
-        {email.attachments && email.attachments.length > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-muted-foreground font-medium mb-2 flex items-center gap-1">
-              <Paperclip className="h-3 w-3" />
-              Attachments ({email.attachments.length})
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {email.attachments.map((att, idx) => (
-                <Badge key={idx} variant="outline" className="gap-1">
-                  <Paperclip className="h-3 w-3" />
-                  {att.name}
-                </Badge>
-              ))}
+          {email.attachments && email.attachments.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-xs text-muted-foreground font-medium mb-2 flex items-center gap-1">
+                <Paperclip className="h-3 w-3" />
+                Attachments ({email.attachments.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {email.attachments.map((att, idx) => (
+                  <Badge key={idx} variant="outline" className="gap-1">
+                    <Paperclip className="h-3 w-3" />
+                    {att.name}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </CardContent>
+          )}
+        </CardContent>
+      )}
     </Card>
+  );
+}
+
+export function EmailViewer({ emails, onReply, onForward }: EmailViewerProps) {
+  const sorted = [...emails].sort(
+    (a, b) =>
+      new Date(a.sent_at || a.created_at).getTime() -
+      new Date(b.sent_at || b.created_at).getTime()
+  );
+
+  return (
+    <div className="space-y-3">
+      {sorted.map((email, index) => {
+        const isLatest = index === sorted.length - 1;
+        return (
+          <SingleEmailView
+            key={email.id}
+            email={email}
+            isLatest={isLatest}
+            defaultExpanded={isLatest}
+            onReply={onReply}
+            onForward={onForward}
+          />
+        );
+      })}
+    </div>
   );
 }

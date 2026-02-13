@@ -63,7 +63,7 @@ export default async function TimeTrackingPage() {
         <div className="lg:col-span-2">
           {entries.length === 0 ? (
             <EmptyState
-              icon={Clock}
+              icon={<Clock className="h-8 w-8 text-muted-foreground" />}
               title="No time entries yet"
               description="Start the timer or add a manual entry to track your billable hours."
             />

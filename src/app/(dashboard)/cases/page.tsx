@@ -54,7 +54,7 @@ export default async function CasesPage({
 
       {cases.length === 0 ? (
         <EmptyState
-          icon={Briefcase}
+          icon={<Briefcase className="h-8 w-8 text-muted-foreground" />}
           title="No cases found"
           description="Create your first case to start managing your legal work."
           action={

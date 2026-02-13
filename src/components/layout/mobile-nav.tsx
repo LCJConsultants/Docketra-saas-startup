@@ -19,6 +19,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { useUnreadEmails } from "@/hooks/use-unread-emails";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -40,6 +42,7 @@ interface MobileNavProps {
 
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
+  const { unreadCount } = useUnreadEmails();
 
   if (!open) return null;
 
@@ -89,7 +92,12 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                   )}
                 >
                   <item.icon className="h-4 w-4" />
-                  <span>{item.name}</span>
+                  <span className="flex-1">{item.name}</span>
+                  {item.name === "Emails" && unreadCount > 0 && (
+                    <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] flex items-center justify-center text-[10px] px-1.5">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
+                  )}
                 </Link>
               );
             })}

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Eye, Download, Trash2 } from "lucide-react";
+import { MoreVertical, Eye, Trash2, FileText, FileDown } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileIcon } from "@/components/shared/file-icon";
 import { formatDate } from "@/lib/utils";
 import { deleteDocumentAction } from "@/actions/documents";
@@ -47,6 +56,7 @@ export function DocumentList({ documents }: DocumentListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this document?")) return;
@@ -64,104 +74,165 @@ export function DocumentList({ documents }: DocumentListProps) {
   };
 
   const handleView = (doc: Document) => {
-    if (doc.storage_path) {
-      // Open the Supabase storage URL in a new tab
+    if (doc.source === "ai_draft" && doc.ocr_text) {
+      setViewingDoc(doc);
+    } else if (doc.storage_path) {
       const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storage_path}`;
       window.open(url, "_blank");
     }
   };
 
-  const handleDownload = (doc: Document) => {
-    if (doc.storage_path) {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storage_path}`;
+  const handleExport = async (doc: Document, format: "word" | "pdf") => {
+    const endpoint = format === "word" ? "/api/documents/export" : "/api/documents/export-pdf";
+    const ext = format === "word" ? ".docx" : ".pdf";
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: doc.id }),
+      });
+
+      if (!response.ok) throw new Error("Export failed");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = doc.file_name;
+      a.download = doc.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_") + ext;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(`Failed to export as ${format === "word" ? "Word" : "PDF"}`);
     }
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {documents.map((doc) => (
-        <Card
-          key={doc.id}
-          className={`transition-opacity ${
-            deletingId === doc.id && isPending ? "opacity-50" : ""
-          }`}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <FileIcon
-                    fileType={doc.file_type || doc.file_name}
-                    className="h-8 w-8"
-                  />
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {documents.map((doc) => (
+          <Card
+            key={doc.id}
+            className={`transition-opacity ${
+              deletingId === doc.id && isPending ? "opacity-50" : ""
+            }`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <FileIcon
+                      fileType={doc.file_type || doc.file_name}
+                      className="h-8 w-8"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium leading-tight truncate">
+                      {doc.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {doc.source === "ai_draft" ? "AI Draft" : doc.file_name}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium leading-tight truncate">
-                    {doc.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {doc.file_name}
-                  </p>
-                </div>
+
+                {/* Actions dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleView(doc)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport(doc, "word")}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download as Word
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport(doc, "pdf")}>
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Download as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleDelete(doc.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
-              {/* Actions dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleView(doc)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDownload(doc)}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => handleDelete(doc.id)}
+              {/* Metadata row */}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {doc.category && (
+                  <Badge
+                    variant={categoryBadgeVariant[doc.category] ?? "outline"}
+                    className="capitalize text-[10px]"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    {doc.category}
+                  </Badge>
+                )}
+                {doc.source === "ai_draft" && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    AI Draft
+                  </Badge>
+                )}
+                {doc.file_size && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatFileSize(doc.file_size)}
+                  </span>
+                )}
+              </div>
 
-            {/* Metadata row */}
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {doc.category && (
-                <Badge
-                  variant={categoryBadgeVariant[doc.category] ?? "outline"}
-                  className="capitalize text-[10px]"
-                >
-                  {doc.category}
-                </Badge>
-              )}
-              {doc.file_size && (
-                <span className="text-[10px] text-muted-foreground">
-                  {formatFileSize(doc.file_size)}
-                </span>
-              )}
-            </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                {formatDate(doc.created_at)}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {formatDate(doc.created_at)}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+      {/* Document Viewer Dialog for AI Drafts */}
+      <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>{viewingDoc?.title}</DialogTitle>
+            <DialogDescription>
+              AI-generated document. Review carefully before filing or sending.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm p-2">
+              {viewingDoc?.ocr_text}
+            </div>
+          </ScrollArea>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setViewingDoc(null)}>
+              Close
+            </Button>
+            {viewingDoc && (
+              <>
+                <Button variant="outline" onClick={() => handleExport(viewingDoc, "pdf")}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Download as PDF
+                </Button>
+                <Button onClick={() => handleExport(viewingDoc, "word")}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download as Word
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

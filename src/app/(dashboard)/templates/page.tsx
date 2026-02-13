@@ -69,7 +69,7 @@ export default async function TemplatesPage({
 
       {templates.length === 0 ? (
         <EmptyState
-          icon={FileText}
+          icon={<FileText className="h-8 w-8 text-muted-foreground" />}
           title="No templates found"
           description="Create your first template to speed up document drafting."
           action={

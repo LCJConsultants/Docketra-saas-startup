@@ -91,7 +91,7 @@ export function InvoiceBuilder({ clients, cases, unbilledEntries = [] }: Invoice
     try {
       const formData = new FormData();
       formData.set("client_id", selectedClientId);
-      formData.set("case_id", selectedCaseId);
+      formData.set("case_id", selectedCaseId === "none" ? "" : selectedCaseId);
       formData.set("notes", notes);
       formData.set("due_date", dueDate);
       formData.set("tax_rate", taxRate);
@@ -147,7 +147,7 @@ export function InvoiceBuilder({ clients, cases, unbilledEntries = [] }: Invoice
                   <SelectValue placeholder="Select case" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No case</SelectItem>
+                  <SelectItem value="none">No case</SelectItem>
                   {filteredCases.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                   ))}

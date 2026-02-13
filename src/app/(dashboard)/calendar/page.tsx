@@ -1,28 +1,14 @@
-import Link from "next/link";
-import { Plus, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/shared/page-header";
-import { CalendarView } from "@/components/calendar/calendar-view";
+import { CalendarPageClient } from "./calendar-client";
 import { getCalendarEvents } from "@/actions/calendar";
+import { getCases } from "@/actions/cases";
 
 export default async function CalendarPage() {
-  const events = await getCalendarEvents();
+  const [events, cases] = await Promise.all([
+    getCalendarEvents(),
+    getCases({ status: "open" }),
+  ]);
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Calendar"
-        description="Court dates, deadlines, and events"
-        action={
-          <Link href="/calendar?new=true">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Event
-            </Button>
-          </Link>
-        }
-      />
-      <CalendarView events={events} />
-    </div>
-  );
+  const casesList = cases.map((c) => ({ id: c.id, title: c.title }));
+
+  return <CalendarPageClient events={events} cases={casesList} />;
 }
