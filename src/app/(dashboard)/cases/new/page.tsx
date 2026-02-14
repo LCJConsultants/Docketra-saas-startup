@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getClients } from "@/actions/clients";
 
 export default async function NewCasePage() {
-  const clients = await getClients();
+  const { data: clients } = await getClients();
 
   return (
     <div className="space-y-6 max-w-2xl">

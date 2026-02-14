@@ -24,7 +24,7 @@ export default async function DocumentsPage({
   searchParams: Promise<{ category?: string; case_id?: string; search?: string }>;
 }) {
   const params = await searchParams;
-  const documents = await getDocuments({
+  const { data: documents } = await getDocuments({
     category: params.category,
     case_id: params.case_id,
     search: params.search,

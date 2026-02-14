@@ -7,7 +7,7 @@ import { ClientTable } from "@/components/clients/client-table";
 import { getClients } from "@/actions/clients";
 
 export default async function ClientsPage() {
-  const clients = await getClients();
+  const { data: clients } = await getClients();
 
   return (
     <div className="space-y-6">

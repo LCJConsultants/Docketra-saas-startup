@@ -35,6 +35,9 @@ export default async function DashboardLayout({
       .select()
       .single();
     profile = newProfile;
+
+    // New user — redirect to onboarding
+    redirect("/onboarding");
   }
 
   return (

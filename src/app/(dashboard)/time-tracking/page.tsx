@@ -10,10 +10,12 @@ import { formatDuration, formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function TimeTrackingPage() {
-  const [entries, cases] = await Promise.all([
+  const [entriesResult, casesResult] = await Promise.all([
     getTimeEntries(),
     getCases({ status: "open" }),
   ]);
+  const entries = entriesResult.data;
+  const cases = casesResult.data;
 
   const casesList = cases.map((c) => ({ id: c.id, title: c.title }));
 

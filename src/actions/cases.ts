@@ -19,16 +19,22 @@ const caseSchema = z.object({
   tags: z.string().optional(), // comma-separated
 });
 
-export async function getCases(filters?: { status?: string; case_type?: string }) {
+export async function getCases(filters?: { status?: string; case_type?: string; page?: number; limit?: number }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 50;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("cases")
-    .select("*, client:clients(id, first_name, last_name)")
+    .select("*, client:clients(id, first_name, last_name)", { count: "exact" })
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
@@ -37,9 +43,9 @@ export async function getCases(filters?: { status?: string; case_type?: string }
     query = query.eq("case_type", filters.case_type);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  return { data: data || [], total: count || 0, page, limit };
 }
 
 export async function getCase(id: string) {

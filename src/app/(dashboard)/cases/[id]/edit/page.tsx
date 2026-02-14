@@ -14,7 +14,7 @@ export default async function EditCasePage({ params }: { params: Promise<{ id: s
     notFound();
   }
 
-  const clients = await getClients();
+  const { data: clients } = await getClients();
 
   return (
     <div className="space-y-6 max-w-2xl">

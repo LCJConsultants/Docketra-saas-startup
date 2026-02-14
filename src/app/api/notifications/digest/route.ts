@@ -4,7 +4,12 @@ import { resend } from "@/lib/resend";
 import { buildDigestEmail } from "@/lib/digest-template";
 import { format } from "date-fns";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createAdminClient();
 
   const { data: profiles } = await supabase

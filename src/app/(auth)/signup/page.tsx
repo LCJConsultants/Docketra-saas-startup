@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldError } from "@/components/shared/field-error";
 import { toast } from "sonner";
 
 export default function SignupPage() {
@@ -17,9 +18,41 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+
+  const validatePassword = (pw: string) => {
+    if (pw.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(pw)) return "Include at least one uppercase letter";
+    if (!/[a-z]/.test(pw)) return "Include at least one lowercase letter";
+    if (!/[0-9]/.test(pw)) return "Include at least one number";
+    return "";
+  };
+
+  const getPasswordStrength = (pw: string): { label: string; color: string; width: string } => {
+    if (!pw) return { label: "", color: "", width: "0%" };
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    if (score <= 1) return { label: "Weak", color: "bg-destructive", width: "20%" };
+    if (score === 2) return { label: "Fair", color: "bg-orange-500", width: "40%" };
+    if (score === 3) return { label: "Good", color: "bg-yellow-500", width: "60%" };
+    if (score === 4) return { label: "Strong", color: "bg-green-500", width: "80%" };
+    return { label: "Very Strong", color: "bg-green-600", width: "100%" };
+  };
+
+  const strength = getPasswordStrength(password);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setPasswordError(pwError);
+      return;
+    }
     setLoading(true);
 
     const supabase = createClient();
@@ -100,10 +133,26 @@ export default function SignupPage() {
                 type="password"
                 placeholder="At least 8 characters"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError(validatePassword(e.target.value));
+                }}
+                aria-invalid={!!passwordError}
+                className={passwordError ? "border-destructive" : ""}
                 required
               />
+              {password && (
+                <div className="space-y-1">
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${strength.color}`}
+                      style={{ width: strength.width }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{strength.label}</p>
+                </div>
+              )}
+              <FieldError message={passwordError} />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -134,12 +183,23 @@ export default function SignupPage() {
             Google
           </Button>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="flex-col gap-3">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="text-primary hover:underline font-medium">
               Sign in
             </Link>
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            .
           </p>
         </CardFooter>
       </Card>

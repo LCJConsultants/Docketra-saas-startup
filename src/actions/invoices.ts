@@ -13,23 +13,29 @@ const invoiceSchema = z.object({
   tax_rate: z.coerce.number().min(0).max(100).optional(),
 });
 
-export async function getInvoices(filters?: { status?: string; client_id?: string }) {
+export async function getInvoices(filters?: { status?: string; client_id?: string; page?: number; limit?: number }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 50;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("invoices")
-    .select("*, client:clients(id, first_name, last_name), case:cases(id, title)")
+    .select("*, client:clients(id, first_name, last_name), case:cases(id, title)", { count: "exact" })
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (filters?.status) query = query.eq("status", filters.status);
   if (filters?.client_id) query = query.eq("client_id", filters.client_id);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  return { data: data || [], total: count || 0, page, limit };
 }
 
 export async function getInvoice(id: string) {
@@ -92,6 +98,18 @@ export async function addLineItemAction(invoiceId: string, data: {
   time_entry_id?: string;
 }) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Verify the invoice belongs to this user
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (invoiceError || !invoice) throw new Error("Invoice not found");
 
   const { error } = await supabase
     .from("invoice_line_items")
@@ -106,12 +124,24 @@ export async function addLineItemAction(invoiceId: string, data: {
   if (error) throw error;
 
   // Recalculate totals
-  await recalculateInvoiceTotals(invoiceId);
+  await recalculateInvoiceTotals(invoiceId, user.id);
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
 export async function removeLineItemAction(lineItemId: string, invoiceId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Verify the invoice belongs to this user
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (invoiceError || !invoice) throw new Error("Invoice not found");
 
   const { error } = await supabase
     .from("invoice_line_items")
@@ -120,11 +150,11 @@ export async function removeLineItemAction(lineItemId: string, invoiceId: string
 
   if (error) throw error;
 
-  await recalculateInvoiceTotals(invoiceId);
+  await recalculateInvoiceTotals(invoiceId, user.id);
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
-async function recalculateInvoiceTotals(invoiceId: string) {
+async function recalculateInvoiceTotals(invoiceId: string, userId: string) {
   const supabase = await createClient();
 
   const { data: items } = await supabase
@@ -138,6 +168,7 @@ async function recalculateInvoiceTotals(invoiceId: string) {
     .from("invoices")
     .select("tax_rate")
     .eq("id", invoiceId)
+    .eq("user_id", userId)
     .single();
 
   const taxRate = invoice?.tax_rate || 0;
@@ -147,7 +178,8 @@ async function recalculateInvoiceTotals(invoiceId: string) {
   await supabase
     .from("invoices")
     .update({ subtotal, tax_amount: taxAmount, total })
-    .eq("id", invoiceId);
+    .eq("id", invoiceId)
+    .eq("user_id", userId);
 }
 
 export async function updateInvoiceStatusAction(id: string, status: string) {

@@ -22,7 +22,7 @@ export default async function InvoicesPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const params = await searchParams;
-  const invoices = await getInvoices({ status: params.status });
+  const { data: invoices } = await getInvoices({ status: params.status });
 
   return (
     <div className="space-y-6">

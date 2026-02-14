@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  // TODO: Handle incoming Gmail webhook notifications
-  return NextResponse.json({ message: "Gmail webhook endpoint ready" });
+  return NextResponse.json({ error: "Gmail webhook not yet implemented" }, { status: 501 });
 }

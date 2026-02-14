@@ -15,19 +15,25 @@ const clientSchema = z.object({
   status: z.enum(["active", "inactive", "archived"]).optional(),
 });
 
-export async function getClients() {
+export async function getClients(filters?: { page?: number; limit?: number }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data, error } = await supabase
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 50;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from("clients")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) throw error;
-  return data;
+  return { data: data || [], total: count || 0, page, limit };
 }
 
 export async function getClient(id: string) {

@@ -13,16 +13,22 @@ const timeEntrySchema = z.object({
   is_billable: z.string().optional(),
 });
 
-export async function getTimeEntries(filters?: { case_id?: string; unbilled?: boolean }) {
+export async function getTimeEntries(filters?: { case_id?: string; unbilled?: boolean; page?: number; limit?: number }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 50;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("time_entries")
-    .select("*, case:cases(id, title)")
+    .select("*, case:cases(id, title)", { count: "exact" })
     .eq("user_id", user.id)
-    .order("date", { ascending: false });
+    .order("date", { ascending: false })
+    .range(from, to);
 
   if (filters?.case_id) {
     query = query.eq("case_id", filters.case_id);
@@ -31,9 +37,9 @@ export async function getTimeEntries(filters?: { case_id?: string; unbilled?: bo
     query = query.is("invoice_id", null);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  return { data: data || [], total: count || 0, page, limit };
 }
 
 export async function createTimeEntryAction(formData: FormData) {

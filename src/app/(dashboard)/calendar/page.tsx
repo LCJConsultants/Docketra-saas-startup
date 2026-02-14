@@ -3,12 +3,12 @@ import { getCalendarEvents } from "@/actions/calendar";
 import { getCases } from "@/actions/cases";
 
 export default async function CalendarPage() {
-  const [events, cases] = await Promise.all([
+  const [events, casesResult] = await Promise.all([
     getCalendarEvents(),
     getCases({ status: "open" }),
   ]);
 
-  const casesList = cases.map((c) => ({ id: c.id, title: c.title }));
+  const casesList = casesResult.data.map((c) => ({ id: c.id, title: c.title }));
 
   return <CalendarPageClient events={events} cases={casesList} />;
 }

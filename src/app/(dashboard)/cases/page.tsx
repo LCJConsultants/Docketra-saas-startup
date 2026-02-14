@@ -12,7 +12,7 @@ export default async function CasesPage({
   searchParams: Promise<{ status?: string; case_type?: string }>;
 }) {
   const params = await searchParams;
-  const cases = await getCases({
+  const { data: cases } = await getCases({
     status: params.status,
     case_type: params.case_type,
   });

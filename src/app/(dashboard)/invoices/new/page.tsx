@@ -5,11 +5,14 @@ import { getCases } from "@/actions/cases";
 import { getTimeEntries } from "@/actions/time-entries";
 
 export default async function NewInvoicePage() {
-  const [clients, cases, entries] = await Promise.all([
+  const [clientsResult, casesResult, entriesResult] = await Promise.all([
     getClients(),
     getCases(),
     getTimeEntries({ unbilled: true }),
   ]);
+  const clients = clientsResult.data;
+  const cases = casesResult.data;
+  const entries = entriesResult.data;
 
   return (
     <div className="space-y-6 max-w-3xl">

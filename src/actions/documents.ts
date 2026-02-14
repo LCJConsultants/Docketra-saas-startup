@@ -23,6 +23,8 @@ export async function getDocuments(filters?: {
   case_id?: string;
   category?: string;
   search?: string;
+  page?: number;
+  limit?: number;
 }) {
   const supabase = await createClient();
   const {
@@ -30,11 +32,17 @@ export async function getDocuments(filters?: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 50;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("documents")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (filters?.case_id) {
     query = query.eq("case_id", filters.case_id);
@@ -46,9 +54,9 @@ export async function getDocuments(filters?: {
     query = query.ilike("title", `%${filters.search}%`);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  return { data: data || [], total: count || 0, page, limit };
 }
 
 export async function getDocument(id: string) {
