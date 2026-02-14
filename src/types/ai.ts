@@ -1,7 +1,14 @@
+export interface ChatAttachment {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: string;
+  attachment?: ChatAttachment;
 }
 
 export interface DraftRequest {

@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { openai } from "@/lib/openai";
 import type { ChatCompletionTool, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
+interface UploadedFileInfo {
+  storagePath: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
 const tools: ChatCompletionTool[] = [
   {
     type: "function",
@@ -143,13 +150,35 @@ const tools: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "file_document",
+      description: "File an already-uploaded document to a case by creating the database record. Use this when the user has attached a file and wants it filed to a specific case. The file has already been uploaded to storage — do NOT re-upload it.",
+      parameters: {
+        type: "object",
+        properties: {
+          storage_path: { type: "string", description: "The storage path of the uploaded file" },
+          file_name: { type: "string", description: "Original file name" },
+          file_type: { type: "string", description: "MIME type of the file" },
+          file_size: { type: "number", description: "File size in bytes" },
+          case_id: { type: "string", description: "UUID of the case to file the document to (optional)" },
+          client_id: { type: "string", description: "UUID of the client to associate (optional)" },
+          title: { type: "string", description: "Document title (defaults to file name without extension)" },
+          category: { type: "string", enum: ["motion", "pleading", "letter", "contract", "agreement", "evidence", "correspondence", "other"], description: "Document category (defaults to 'other')" },
+        },
+        required: ["storage_path", "file_name", "file_type", "file_size"],
+      },
+    },
+  },
 ];
 
 async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
   userId: string,
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  uploadedFileInfo?: UploadedFileInfo
 ): Promise<string> {
   switch (toolName) {
     case "create_calendar_event": {
@@ -440,6 +469,88 @@ ID: ${data.id}`;
       return `Successfully drafted "${args.title}" and saved it to your Documents. You can review and edit it in the Documents section.`;
     }
 
+    case "file_document": {
+      if (!uploadedFileInfo) {
+        return "Error: No file was uploaded with this request. The user must attach a file to use this tool.";
+      }
+
+      // Safety guard: override storage_path to prevent hallucination
+      const storagePath = uploadedFileInfo.storagePath;
+      const fileName = uploadedFileInfo.fileName;
+      const fileType = uploadedFileInfo.fileType;
+      const fileSize = uploadedFileInfo.fileSize;
+
+      const title = (args.title as string) || fileName.replace(/\.[^/.]+$/, "");
+      const category = (args.category as string) || "other";
+
+      const { data: document, error: dbError } = await supabase
+        .from("documents")
+        .insert({
+          user_id: userId,
+          title,
+          file_name: fileName,
+          file_type: fileType || null,
+          file_size: fileSize || null,
+          storage_path: storagePath,
+          case_id: (args.case_id as string) || null,
+          client_id: (args.client_id as string) || null,
+          category,
+          is_template: false,
+          source: "ai_upload",
+        })
+        .select()
+        .single();
+
+      if (dbError) return `Error filing document: ${dbError.message}`;
+
+      // Google Drive sync if case is provided
+      if (args.case_id && document) {
+        try {
+          const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("google_refresh_token")
+            .eq("id", userId)
+            .single();
+
+          if (userProfile?.google_refresh_token) {
+            const { data: caseData } = await supabase
+              .from("cases")
+              .select("drive_folder_id")
+              .eq("id", args.case_id as string)
+              .single();
+
+            if (caseData?.drive_folder_id) {
+              // Download from storage to re-upload to Drive
+              const { data: fileData } = await supabase.storage
+                .from("documents")
+                .download(storagePath);
+
+              if (fileData) {
+                const { uploadToDrive } = await import("@/lib/google");
+                const arrayBuffer = await fileData.arrayBuffer();
+                const driveFileId = await uploadToDrive(
+                  userProfile.google_refresh_token,
+                  fileName,
+                  Buffer.from(arrayBuffer),
+                  fileType,
+                  caseData.drive_folder_id
+                );
+                await supabase
+                  .from("documents")
+                  .update({ drive_file_id: driveFileId })
+                  .eq("id", document.id);
+              }
+            }
+          }
+        } catch (driveErr) {
+          console.error("Drive upload failed (non-critical):", driveErr);
+        }
+      }
+
+      const caseLabel = args.case_id ? ` to the specified case` : "";
+      return `Successfully filed "${title}" (${category})${caseLabel}. Document ID: ${document.id}`;
+    }
+
     default:
       return `Unknown tool: ${toolName}`;
   }
@@ -454,7 +565,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { messages, caseId } = await req.json();
+    // 3a. Dual-format request parsing
+    let messages: { role: string; content: string }[];
+    let caseId: string | undefined;
+    let uploadedFileInfo: UploadedFileInfo | undefined;
+
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      // FormData path: file + messages + optional caseId
+      const formData = await req.formData();
+      const file = formData.get("file") as File | null;
+      const messagesRaw = formData.get("messages") as string | null;
+      const caseIdRaw = formData.get("caseId") as string | null;
+
+      if (!messagesRaw) {
+        return NextResponse.json({ error: "Messages are required" }, { status: 400 });
+      }
+
+      messages = JSON.parse(messagesRaw);
+      caseId = caseIdRaw || undefined;
+
+      // 3b. Upload file to Supabase Storage immediately
+      if (file) {
+        const timestamp = Date.now();
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `${user.id}/${timestamp}-${sanitizedName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("documents")
+          .upload(storagePath, file, {
+            contentType: file.type,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("Storage upload error:", uploadError);
+          return NextResponse.json(
+            { error: "Failed to upload file to storage" },
+            { status: 500 }
+          );
+        }
+
+        uploadedFileInfo = {
+          storagePath,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+        };
+      }
+    } else {
+      // JSON path: existing behavior unchanged
+      const body = await req.json();
+      messages = body.messages;
+      caseId = body.caseId;
+    }
 
     // Build context about the case if provided
     let caseContext = "";
@@ -482,12 +647,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 3c. Inject file context into system prompt
+    let fileContext = "";
+    if (uploadedFileInfo) {
+      fileContext = `\n\nThe user has attached a file to this message:
+- File name: ${uploadedFileInfo.fileName}
+- File type: ${uploadedFileInfo.fileType}
+- File size: ${uploadedFileInfo.fileSize} bytes
+- Storage path: ${uploadedFileInfo.storagePath}
+
+The file has already been uploaded to storage. Use the \`file_document\` tool to create the document record and file it to the appropriate case. Do NOT re-upload the file. Use the storage_path, file_name, file_type, and file_size values provided above.`;
+    }
+
     const systemPrompt = `You are Docketra AI, an intelligent legal assistant built into the Docketra legal practice management platform. You help solo attorneys and small law firms with:
 
 - Creating and managing calendar events, court dates, and deadlines
 - Looking up case details and client information
 - Logging billable time entries
 - Drafting legal documents (motions, pleadings, letters, contracts) — use draft_document for freeform drafting, or list_templates + draft_from_template to draft from saved templates
+- Uploading and filing documents to cases
 - Summarizing case details and documents
 - Legal research and analysis
 - General legal practice management advice
@@ -497,7 +675,7 @@ You have direct access to the Docketra system through tools. When a user asks yo
 
 Always be professional, accurate, and thorough. When drafting documents, use proper legal formatting and language. If you are unsure about jurisdiction-specific rules, mention that the attorney should verify local rules.
 
-You are NOT a substitute for legal judgment. Always remind users that AI-generated content should be reviewed before filing or sending.${caseContext}`;
+You are NOT a substitute for legal judgment. Always remind users that AI-generated content should be reviewed before filing or sending.${caseContext}${fileContext}`;
 
     const apiMessages: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
@@ -529,7 +707,7 @@ You are NOT a substitute for legal judgment. Always remind users that AI-generat
       for (const toolCall of assistantMessage.tool_calls) {
         const fn = toolCall as unknown as { function: { arguments: string; name: string } };
         const args = JSON.parse(fn.function.arguments);
-        const result = await executeTool(fn.function.name, args, user.id, supabase);
+        const result = await executeTool(fn.function.name, args, user.id, supabase, uploadedFileInfo);
 
         apiMessages.push({
           role: "tool",

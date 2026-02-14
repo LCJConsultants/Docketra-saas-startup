@@ -8,10 +8,11 @@ export function useAiChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string, caseId?: string) => {
-      if (!content.trim()) return;
+    async (content: string, caseId?: string, file?: File) => {
+      if (!content.trim() && !file) return;
 
       setError(null);
       setIsLoading(true);
@@ -20,22 +21,43 @@ export function useAiChat() {
         role: "user",
         content,
         timestamp: new Date().toISOString(),
+        ...(file && {
+          attachment: {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+          },
+        }),
       };
 
       setMessages((prev) => [...prev, userMessage]);
 
-      // Prepare messages for the API (without timestamps)
+      // Prepare messages for the API (without timestamps and attachments)
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
 
       try {
-        const response = await fetch("/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, caseId }),
-        });
+        let response: Response;
+
+        if (file) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("messages", JSON.stringify(apiMessages));
+          if (caseId) formData.append("caseId", caseId);
+
+          response = await fetch("/api/ai/chat", {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          response = await fetch("/api/ai/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: apiMessages, caseId }),
+          });
+        }
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -94,5 +116,5 @@ export function useAiChat() {
     [messages]
   );
 
-  return { messages, sendMessage, isLoading, error, input, setInput };
+  return { messages, sendMessage, isLoading, error, input, setInput, attachedFile, setAttachedFile };
 }
