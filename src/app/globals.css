@@ -33,6 +33,32 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+.dark {
+  --color-background: #0f1117;
+  --color-foreground: #e5e7eb;
+  --color-card: #1a1d27;
+  --color-card-foreground: #e5e7eb;
+  --color-popover: #1a1d27;
+  --color-popover-foreground: #e5e7eb;
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+  --color-primary-light: #60a5fa;
+  --color-secondary: #1e2130;
+  --color-secondary-foreground: #e5e7eb;
+  --color-muted: #1e2130;
+  --color-muted-foreground: #9ca3af;
+  --color-accent: #d4a843;
+  --color-accent-foreground: #1a1a2e;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #2d3143;
+  --color-input: #2d3143;
+  --color-ring: #3b82f6;
+  --color-sidebar: #111320;
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-accent: #1e2640;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -57,4 +83,10 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
 }

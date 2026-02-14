@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,6 +46,7 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
         size="icon"
         className="lg:hidden"
         onClick={onMenuToggle}
+        aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -63,15 +65,17 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
+        <ThemeToggle />
+
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative" onClick={() => router.push("/notifications")}>
+        <Button variant="ghost" size="icon" className="relative" onClick={() => router.push("/notifications")} aria-label="Notifications">
           <Bell className="h-5 w-5" />
         </Button>
 
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full" aria-label="User menu">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={user?.avatar_url || undefined} alt={user?.full_name || ""} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { User, CreditCard, Bell, Plug, ChevronRight } from "lucide-react";
+import { User, CreditCard, Bell, Plug, ChevronRight, UserX } from "lucide-react";
 
 const settingsSections = [
   {
@@ -27,6 +27,12 @@ const settingsSections = [
     description: "Configure email and in-app notification preferences",
     href: "/settings/notifications",
     icon: Bell,
+  },
+  {
+    title: "Account",
+    description: "Delete your account and data",
+    href: "/settings/account",
+    icon: UserX,
   },
 ];
 

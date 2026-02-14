@@ -63,7 +63,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             </div>
             <span className="text-lg font-semibold tracking-tight">Docketra</span>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white">
+          <button onClick={onClose} aria-label="Close menu" className="text-white/70 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>

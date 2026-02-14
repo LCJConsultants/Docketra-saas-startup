@@ -130,6 +130,7 @@ export function Sidebar({ onAiToggle }: SidebarProps) {
         <div className="px-3 py-3 border-t border-white/10">
           <button
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="flex items-center justify-center w-full rounded-lg p-2 text-white/50 hover:text-white hover:bg-sidebar-accent/50 transition-colors"
           >
             {collapsed ? (

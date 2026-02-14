@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
 const profileUpdateSchema = z.object({
@@ -50,6 +52,11 @@ export async function updateNotificationPrefsAction(formData: FormData) {
     email: formData.get("email_notifications") === "true",
     in_app: formData.get("in_app_notifications") === "true",
     digest: formData.get("digest_notifications") === "true",
+    notify_deadlines: formData.get("notify_deadlines") !== "false",
+    notify_court_dates: formData.get("notify_court_dates") !== "false",
+    notify_filings: formData.get("notify_filings") !== "false",
+    notify_meetings: formData.get("notify_meetings") !== "false",
+    notify_sol: formData.get("notify_sol") !== "false",
   };
 
   const { error } = await supabase
@@ -104,4 +111,32 @@ export async function getProfile() {
 
   if (error) throw error;
   return data;
+}
+
+export async function deleteAccountAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Delete user data from all tables (cascade from profile)
+  const admin = createAdminClient();
+
+  // Delete in order to respect foreign keys
+  await admin.from("notifications").delete().eq("user_id", user.id);
+  await admin.from("time_entries").delete().eq("user_id", user.id);
+  await admin.from("calendar_events").delete().eq("user_id", user.id);
+  await admin.from("documents").delete().eq("user_id", user.id);
+  await admin.from("invoices").delete().eq("user_id", user.id);
+  await admin.from("cases").delete().eq("user_id", user.id);
+  await admin.from("clients").delete().eq("user_id", user.id);
+  await admin.from("emails").delete().eq("user_id", user.id);
+  await admin.from("profiles").delete().eq("id", user.id);
+
+  // Delete the auth user
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) throw error;
+
+  // Sign out and redirect
+  await supabase.auth.signOut();
+  redirect("/login");
 }
