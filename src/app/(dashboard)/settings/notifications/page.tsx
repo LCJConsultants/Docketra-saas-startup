@@ -1,6 +1,7 @@
 import { getProfile, updateNotificationPrefsAction } from "@/actions/settings";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
 export default async function NotificationSettingsPage() {
@@ -23,14 +24,15 @@ export default async function NotificationSettingsPage() {
                 <p className="text-sm font-medium">Email Notifications</p>
                 <p className="text-xs text-muted-foreground">Receive alerts via email</p>
               </div>
-              <select
-                name="email_notifications"
-                defaultValue={prefs.email ? "true" : "false"}
-                className="rounded-md border px-3 py-1.5 text-sm"
-              >
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
-              </select>
+              <Select name="email_notifications" defaultValue={prefs.email ? "true" : "false"}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Enabled</SelectItem>
+                  <SelectItem value="false">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -38,14 +40,15 @@ export default async function NotificationSettingsPage() {
                 <p className="text-sm font-medium">In-App Notifications</p>
                 <p className="text-xs text-muted-foreground">Show notifications in the app</p>
               </div>
-              <select
-                name="in_app_notifications"
-                defaultValue={prefs.in_app ? "true" : "false"}
-                className="rounded-md border px-3 py-1.5 text-sm"
-              >
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
-              </select>
+              <Select name="in_app_notifications" defaultValue={prefs.in_app ? "true" : "false"}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Enabled</SelectItem>
+                  <SelectItem value="false">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -53,14 +56,15 @@ export default async function NotificationSettingsPage() {
                 <p className="text-sm font-medium">Daily Digest</p>
                 <p className="text-xs text-muted-foreground">Morning summary of today&apos;s events and deadlines</p>
               </div>
-              <select
-                name="digest_notifications"
-                defaultValue={prefs.digest ? "true" : "false"}
-                className="rounded-md border px-3 py-1.5 text-sm"
-              >
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
-              </select>
+              <Select name="digest_notifications" defaultValue={prefs.digest ? "true" : "false"}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Enabled</SelectItem>
+                  <SelectItem value="false">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button type="submit">Save Preferences</Button>

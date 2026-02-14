@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldError } from "@/components/shared/field-error";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { createCaseAction, updateCaseAction } from "@/actions/cases";
@@ -18,20 +19,38 @@ interface CaseFormProps {
   clients: Pick<Client, "id" | "first_name" | "last_name">[];
 }
 
+interface FormErrors {
+  client_id?: string;
+  title?: string;
+}
+
 export function CaseForm({ caseData, clients }: CaseFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   const isEditing = !!caseData;
   const defaultClientId = searchParams.get("client_id") || caseData?.client_id || "";
 
+  const validate = (formData: FormData): FormErrors => {
+    const errs: FormErrors = {};
+    const clientId = (formData.get("client_id") as string)?.trim();
+    const title = (formData.get("title") as string)?.trim();
+
+    if (!clientId) errs.client_id = "Please select a client";
+    if (!title) errs.title = "Case title is required";
+    return errs;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const errs = validate(formData);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     setLoading(true);
-
     try {
-      const formData = new FormData(e.currentTarget);
-
       if (isEditing) {
         await updateCaseAction(caseData.id, formData);
         toast.success("Case updated successfully");
@@ -49,7 +68,7 @@ export function CaseForm({ caseData, clients }: CaseFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <Card>
         <CardHeader>
           <CardTitle>{isEditing ? "Edit Case" : "New Case"}</CardTitle>
@@ -58,8 +77,8 @@ export function CaseForm({ caseData, clients }: CaseFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="client_id">Client *</Label>
-              <Select name="client_id" defaultValue={defaultClientId} required>
-                <SelectTrigger>
+              <Select name="client_id" defaultValue={defaultClientId}>
+                <SelectTrigger className={errors.client_id ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
@@ -70,10 +89,11 @@ export function CaseForm({ caseData, clients }: CaseFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <FieldError message={errors.client_id} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_type">Case Type *</Label>
-              <Select name="case_type" defaultValue={caseData?.case_type || "civil"} required>
+              <Select name="case_type" defaultValue={caseData?.case_type || "civil"}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -97,8 +117,11 @@ export function CaseForm({ caseData, clients }: CaseFormProps) {
                 name="title"
                 placeholder="Smith v. Jones"
                 defaultValue={caseData?.title}
-                required
+                aria-invalid={!!errors.title}
+                className={errors.title ? "border-destructive" : ""}
+                onChange={() => errors.title && setErrors((e) => ({ ...e, title: undefined }))}
               />
+              <FieldError message={errors.title} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_number">Case Number</Label>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldError } from "@/components/shared/field-error";
 import { Loader2 } from "lucide-react";
 import { createTimeEntryAction } from "@/actions/time-entries";
 import { toast } from "sonner";
@@ -16,15 +17,38 @@ interface TimeEntryFormProps {
   onSuccess?: () => void;
 }
 
+interface FormErrors {
+  case_id?: string;
+  description?: string;
+  duration?: string;
+}
+
 export function TimeEntryForm({ cases, defaultCaseId, onSuccess }: TimeEntryFormProps) {
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const validate = (formData: FormData): FormErrors => {
+    const errs: FormErrors = {};
+    const caseId = (formData.get("case_id") as string)?.trim();
+    const description = (formData.get("description") as string)?.trim();
+    const hours = parseInt(formData.get("hours") as string) || 0;
+    const minutes = parseInt(formData.get("minutes") as string) || 0;
+
+    if (!caseId) errs.case_id = "Please select a case";
+    if (!description) errs.description = "Description is required";
+    if (hours === 0 && minutes === 0) errs.duration = "Duration must be greater than 0";
+    return errs;
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const errs = validate(formData);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
+    setLoading(true);
     try {
-      const formData = new FormData(e.currentTarget);
       // Convert hours:minutes to total minutes
       const hours = parseInt(formData.get("hours") as string) || 0;
       const minutes = parseInt(formData.get("minutes") as string) || 0;
@@ -34,6 +58,7 @@ export function TimeEntryForm({ cases, defaultCaseId, onSuccess }: TimeEntryForm
 
       await createTimeEntryAction(formData);
       toast.success("Time entry added");
+      setErrors({});
       onSuccess?.();
       (e.target as HTMLFormElement).reset();
     } catch (error) {
@@ -44,7 +69,7 @@ export function TimeEntryForm({ cases, defaultCaseId, onSuccess }: TimeEntryForm
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Manual Time Entry</CardTitle>
@@ -52,8 +77,8 @@ export function TimeEntryForm({ cases, defaultCaseId, onSuccess }: TimeEntryForm
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="case_id">Case *</Label>
-            <Select name="case_id" defaultValue={defaultCaseId} required>
-              <SelectTrigger>
+            <Select name="case_id" defaultValue={defaultCaseId}>
+              <SelectTrigger className={errors.case_id ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select a case" />
               </SelectTrigger>
               <SelectContent>
@@ -62,26 +87,56 @@ export function TimeEntryForm({ cases, defaultCaseId, onSuccess }: TimeEntryForm
                 ))}
               </SelectContent>
             </Select>
+            <FieldError message={errors.case_id} />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
-            <Input id="description" name="description" placeholder="Drafted motion for summary judgment" required />
+            <Input
+              id="description"
+              name="description"
+              placeholder="Drafted motion for summary judgment"
+              aria-invalid={!!errors.description}
+              className={errors.description ? "border-destructive" : ""}
+              onChange={() => errors.description && setErrors((e) => ({ ...e, description: undefined }))}
+            />
+            <FieldError message={errors.description} />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="hours">Hours</Label>
-              <Input id="hours" name="hours" type="number" min="0" max="24" defaultValue="0" />
+          <div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hours">Hours</Label>
+                <Input
+                  id="hours"
+                  name="hours"
+                  type="number"
+                  min="0"
+                  max="24"
+                  defaultValue="0"
+                  className={errors.duration ? "border-destructive" : ""}
+                  onChange={() => errors.duration && setErrors((e) => ({ ...e, duration: undefined }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="minutes">Minutes</Label>
+                <Input
+                  id="minutes"
+                  name="minutes"
+                  type="number"
+                  min="0"
+                  max="59"
+                  defaultValue="30"
+                  className={errors.duration ? "border-destructive" : ""}
+                  onChange={() => errors.duration && setErrors((e) => ({ ...e, duration: undefined }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hourly_rate">Rate ($/hr)</Label>
+                <Input id="hourly_rate" name="hourly_rate" type="number" step="0.01" min="0" placeholder="250.00" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="minutes">Minutes</Label>
-              <Input id="minutes" name="minutes" type="number" min="0" max="59" defaultValue="30" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hourly_rate">Rate ($/hr)</Label>
-              <Input id="hourly_rate" name="hourly_rate" type="number" step="0.01" min="0" placeholder="250.00" />
-            </div>
+            <FieldError message={errors.duration} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
