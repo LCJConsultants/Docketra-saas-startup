@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import {
+  createGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+} from "@/lib/google";
 
 const eventSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -87,6 +92,39 @@ export async function createEventAction(formData: FormData) {
 
   if (error) throw error;
 
+  // Push to Google Calendar if connected
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("google_refresh_token")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.google_refresh_token) {
+      const googleEventId = await createGoogleCalendarEvent(
+        profile.google_refresh_token,
+        {
+          title: parsed.title,
+          description: parsed.description || null,
+          event_type: parsed.event_type,
+          start_time: parsed.start_time,
+          end_time: parsed.end_time || null,
+          all_day: parsed.all_day === "true",
+          location: parsed.location || null,
+        }
+      );
+      await supabase
+        .from("calendar_events")
+        .update({
+          google_event_id: googleEventId,
+          google_synced_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+    }
+  } catch (err) {
+    console.warn("Google Calendar sync failed on create:", err);
+  }
+
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
   return data;
@@ -124,6 +162,45 @@ export async function updateEventAction(id: string, formData: FormData) {
 
   if (error) throw error;
 
+  // Push update to Google Calendar if connected
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("google_refresh_token")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.google_refresh_token) {
+      const { data: event } = await supabase
+        .from("calendar_events")
+        .select("google_event_id")
+        .eq("id", id)
+        .single();
+
+      if (event?.google_event_id) {
+        await updateGoogleCalendarEvent(
+          profile.google_refresh_token,
+          event.google_event_id,
+          {
+            title: parsed.title,
+            description: parsed.description || null,
+            event_type: parsed.event_type,
+            start_time: parsed.start_time,
+            end_time: parsed.end_time || null,
+            all_day: parsed.all_day === "true",
+            location: parsed.location || null,
+          }
+        );
+        await supabase
+          .from("calendar_events")
+          .update({ google_synced_at: new Date().toISOString() })
+          .eq("id", id);
+      }
+    }
+  } catch (err) {
+    console.warn("Google Calendar sync failed on update:", err);
+  }
+
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
 }
@@ -133,6 +210,14 @@ export async function deleteEventAction(id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Fetch event before deleting to get google_event_id
+  const { data: event } = await supabase
+    .from("calendar_events")
+    .select("google_event_id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
   const { error } = await supabase
     .from("calendar_events")
     .delete()
@@ -140,6 +225,26 @@ export async function deleteEventAction(id: string) {
     .eq("user_id", user.id);
 
   if (error) throw error;
+
+  // Delete from Google Calendar if connected
+  if (event?.google_event_id) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("google_refresh_token")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.google_refresh_token) {
+        await deleteGoogleCalendarEvent(
+          profile.google_refresh_token,
+          event.google_event_id
+        );
+      }
+    } catch (err) {
+      console.warn("Google Calendar sync failed on delete:", err);
+    }
+  }
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");

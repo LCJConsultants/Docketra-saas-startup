@@ -122,7 +122,7 @@ export async function getUnbilledSummary() {
 
   const { data, error } = await supabase
     .from("time_entries")
-    .select("duration_minutes, amount, case:cases(id, title)")
+    .select("duration_minutes, total_amount, case:cases(id, title)")
     .eq("user_id", user.id)
     .eq("is_billable", true)
     .is("invoice_id", null);
@@ -139,12 +139,12 @@ export async function getUnbilledSummary() {
 
     if (existing) {
       existing.total_minutes += entry.duration_minutes || 0;
-      existing.total_amount += entry.amount || 0;
+      existing.total_amount += entry.total_amount || 0;
     } else {
       grouped.set(caseId, {
         case_title: caseTitle,
         total_minutes: entry.duration_minutes || 0,
-        total_amount: entry.amount || 0,
+        total_amount: entry.total_amount || 0,
       });
     }
   }

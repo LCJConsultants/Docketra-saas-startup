@@ -26,7 +26,7 @@ export default async function NewInvoicePage() {
             id: e.id,
             description: e.description,
             duration_minutes: e.duration_minutes,
-            amount: e.amount,
+            total_amount: e.total_amount,
             case_id: e.case_id,
           }))}
       />

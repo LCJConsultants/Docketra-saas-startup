@@ -21,8 +21,8 @@ export default async function TimeTrackingPage() {
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.duration_minutes, 0);
   const totalBillable = entries
-    .filter((e) => e.is_billable && e.amount)
-    .reduce((sum, e) => sum + (e.amount || 0), 0);
+    .filter((e) => e.is_billable && e.total_amount)
+    .reduce((sum, e) => sum + (e.total_amount || 0), 0);
   const unbilledCount = entries.filter((e) => !e.invoice_id).length;
 
   return (

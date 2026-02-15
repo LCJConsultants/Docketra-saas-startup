@@ -7,6 +7,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/calendar",
 ];
 
 function getOAuth2Client() {
@@ -286,4 +287,168 @@ export async function listDriveFiles(
   });
 
   return res.data.files || [];
+}
+
+// --- Google Calendar functions ---
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export interface DocketraEvent {
+  title: string;
+  description?: string | null;
+  event_type: string;
+  start_time: string;
+  end_time?: string | null;
+  all_day?: boolean;
+  location?: string | null;
+}
+
+export function mapDocketraEventToGoogle(event: DocketraEvent) {
+  const gcalEvent: any = {
+    summary: event.title,
+    description: event.description || undefined,
+    location: event.location || undefined,
+    extendedProperties: {
+      private: {
+        docketra_event_type: event.event_type,
+      },
+    },
+  };
+
+  if (event.all_day) {
+    // All-day events use date (YYYY-MM-DD) instead of dateTime
+    const startDate = event.start_time.split("T")[0];
+    gcalEvent.start = { date: startDate };
+    if (event.end_time) {
+      const endDate = event.end_time.split("T")[0];
+      gcalEvent.end = { date: endDate };
+    } else {
+      // Google requires end date; default to next day for single all-day event
+      const [year, month, day] = startDate.split("-").map(Number);
+      const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+      gcalEvent.end = {
+        date: nextDay.toISOString().split("T")[0],
+      };
+    }
+  } else {
+    gcalEvent.start = { dateTime: event.start_time };
+    if (event.end_time) {
+      gcalEvent.end = { dateTime: event.end_time };
+    } else {
+      // Default to 1 hour duration
+      const endTime = new Date(
+        new Date(event.start_time).getTime() + 60 * 60 * 1000
+      ).toISOString();
+      gcalEvent.end = { dateTime: endTime };
+    }
+  }
+
+  return gcalEvent;
+}
+
+export function mapGoogleEventToDocketra(googleEvent: any): {
+  title: string;
+  description: string | null;
+  event_type: string;
+  start_time: string;
+  end_time: string | null;
+  all_day: boolean;
+  location: string | null;
+} {
+  const allDay = !!googleEvent.start?.date;
+  const startTime = allDay
+    ? new Date(googleEvent.start.date + "T00:00:00Z").toISOString()
+    : googleEvent.start?.dateTime || new Date().toISOString();
+  const endTime = allDay
+    ? googleEvent.end?.date
+      ? new Date(googleEvent.end.date + "T00:00:00Z").toISOString()
+      : null
+    : googleEvent.end?.dateTime || null;
+
+  const eventType =
+    googleEvent.extendedProperties?.private?.docketra_event_type || "meeting";
+
+  return {
+    title: googleEvent.summary || "Untitled Event",
+    description: googleEvent.description || null,
+    event_type: eventType,
+    start_time: startTime,
+    end_time: endTime,
+    all_day: allDay,
+    location: googleEvent.location || null,
+  };
+}
+
+export async function fetchGoogleCalendarEvents(
+  refreshToken: string,
+  timeMin: string,
+  timeMax: string
+) {
+  const auth = getAuthenticatedClient(refreshToken);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const res = await calendar.events.list({
+    calendarId: "primary",
+    timeMin,
+    timeMax,
+    singleEvents: true,
+    orderBy: "startTime",
+  });
+
+  return res.data.items || [];
+}
+
+export async function createGoogleCalendarEvent(
+  refreshToken: string,
+  event: DocketraEvent
+): Promise<string> {
+  const auth = getAuthenticatedClient(refreshToken);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const gcalEvent = mapDocketraEventToGoogle(event);
+  const res = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: gcalEvent,
+  });
+
+  return res.data.id!;
+}
+
+export async function updateGoogleCalendarEvent(
+  refreshToken: string,
+  googleEventId: string,
+  event: DocketraEvent
+): Promise<string> {
+  const auth = getAuthenticatedClient(refreshToken);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const gcalEvent = mapDocketraEventToGoogle(event);
+  const res = await calendar.events.update({
+    calendarId: "primary",
+    eventId: googleEventId,
+    requestBody: gcalEvent,
+  });
+
+  return res.data.id!;
+}
+
+export async function deleteGoogleCalendarEvent(
+  refreshToken: string,
+  googleEventId: string
+): Promise<void> {
+  const auth = getAuthenticatedClient(refreshToken);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  try {
+    await calendar.events.delete({
+      calendarId: "primary",
+      eventId: googleEventId,
+    });
+  } catch (err: any) {
+    // Silently handle 404/410 — event already deleted on Google side
+    if (err?.code === 404 || err?.code === 410) {
+      return;
+    }
+    throw err;
+  }
 }

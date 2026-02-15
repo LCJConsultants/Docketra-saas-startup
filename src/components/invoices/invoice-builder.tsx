@@ -20,7 +20,7 @@ interface InvoiceBuilderProps {
     id: string;
     description: string;
     duration_minutes: number;
-    amount: number | null;
+    total_amount: number | null;
     case_id: string;
   }>;
 }
@@ -66,7 +66,7 @@ export function InvoiceBuilder({ clients, cases, unbilledEntries = [] }: Invoice
       .map((e) => ({
         description: e.description,
         quantity: 1,
-        unit_price: e.amount || 0,
+        unit_price: e.total_amount || 0,
         time_entry_id: e.id,
       }));
     setLineItems([...lineItems, ...items]);
