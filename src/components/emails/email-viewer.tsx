@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,15 @@ function SingleEmailView({
   onForward?: (email: Email) => void;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const sanitizedHtml = useMemo(() => {
+    if (!email.body_html) return "";
+    return DOMPurify.sanitize(email.body_html, {
+      FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input", "textarea", "button"],
+      FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
+      ALLOW_DATA_ATTR: false,
+    });
+  }, [email.body_html]);
 
   return (
     <Card>
@@ -88,7 +98,7 @@ function SingleEmailView({
           {email.body_html ? (
             <div
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: email.body_html }}
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
             />
           ) : (
             <pre className="whitespace-pre-wrap text-sm">{email.body_text}</pre>

@@ -13,7 +13,7 @@ const documentSchema = z.object({
   case_id: z.string().uuid().optional().or(z.literal("")),
   client_id: z.string().uuid().optional().or(z.literal("")),
   category: z
-    .enum(["motion", "pleading", "correspondence", "contract", "evidence", "other"])
+    .enum(["motion", "pleading", "letter", "correspondence", "contract", "agreement", "evidence", "other"])
     .optional(),
   is_template: z.coerce.boolean().optional(),
   source: z.string().optional(),

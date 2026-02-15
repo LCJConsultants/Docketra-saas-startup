@@ -202,9 +202,10 @@ async function findFolder(
   name: string,
   parentId?: string
 ): Promise<string | null> {
-  const escapedName = name.replace(/'/g, "\\'");
-  const query = parentId
-    ? `name='${escapedName}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
+  const escapedName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const escapedParentId = parentId ? parentId.replace(/\\/g, "\\\\").replace(/'/g, "\\'") : null;
+  const query = escapedParentId
+    ? `name='${escapedName}' and mimeType='application/vnd.google-apps.folder' and '${escapedParentId}' in parents and trashed=false`
     : `name='${escapedName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
 
   const res = await drive.files.list({ q: query, fields: "files(id)" });

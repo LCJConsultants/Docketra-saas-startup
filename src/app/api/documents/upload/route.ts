@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "text/plain",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -33,6 +45,20 @@ export async function POST(request: Request) {
     if (!title) {
       return NextResponse.json(
         { error: "Title is required" },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File size exceeds 25MB limit" },
+        { status: 400 }
+      );
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx?|txt|jpe?g|png|webp)$/i)) {
+      return NextResponse.json(
+        { error: "Unsupported file type" },
         { status: 400 }
       );
     }

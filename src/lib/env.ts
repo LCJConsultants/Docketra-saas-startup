@@ -12,6 +12,7 @@ const serverRequired = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENAI_API_KEY",
   "RESEND_API_KEY",
+  "CRON_SECRET",
 ] as const;
 
 export function validateEnv() {
