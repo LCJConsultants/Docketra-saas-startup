@@ -119,7 +119,7 @@ export interface TimeEntry {
   description: string;
   duration_minutes: number;
   hourly_rate: number | null;
-  amount: number | null;
+  total_amount: number | null;
   date: string;
   is_billable: boolean;
   invoice_id: string | null;
@@ -168,6 +168,7 @@ export interface DocumentTemplate {
   title: string;
   category: string;
   content: string;
+  file_path: string | null;
   variables: Record<string, string> | null;
   is_system: boolean;
   practice_area: string | null;

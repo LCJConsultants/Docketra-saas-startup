@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Upload, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +40,8 @@ export default async function TemplatesPage({
         action={
           <Link href="/templates/new">
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Template
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Template
             </Button>
           </Link>
         }
@@ -75,8 +75,8 @@ export default async function TemplatesPage({
           action={
             <Link href="/templates/new">
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Template
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Template
               </Button>
             </Link>
           }
@@ -109,10 +109,19 @@ export default async function TemplatesPage({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
-                    {template.content.slice(0, 120)}
-                    {template.content.length > 120 ? "..." : ""}
-                  </p>
+                  {template.file_path ? (
+                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                      <FileUp className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {template.file_path.split("/").pop()?.replace(/^\d+-/, "") || "Uploaded file"}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                      {template.content?.slice(0, 120) ?? ""}
+                      {(template.content?.length ?? 0) > 120 ? "..." : ""}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </Link>

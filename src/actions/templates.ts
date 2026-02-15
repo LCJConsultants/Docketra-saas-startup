@@ -8,7 +8,7 @@ const templateSchema = z.object({
   title: z.string().min(1, "Title is required"),
   category: z.enum(["motion", "pleading", "letter", "contract", "agreement", "other"]),
   practice_area: z.string().optional(),
-  content: z.string().min(1, "Content is required"),
+  content: z.string().optional(),
 });
 
 export async function getTemplates(filters?: { category?: string; practice_area?: string }) {
