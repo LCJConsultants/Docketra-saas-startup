@@ -15,6 +15,9 @@ export default function LandingPage() {
             <span className="text-xl font-semibold text-primary">Docketra</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/pricing">
+              <Button variant="ghost">Pricing</Button>
+            </Link>
             <Link href="/login">
               <Button variant="ghost">Sign in</Button>
             </Link>
@@ -36,7 +39,7 @@ export default function LandingPage() {
           <span className="text-primary">always on call</span>
         </h1>
         <p className="text-lg text-muted-foreground mt-6 max-w-2xl mx-auto">
-          Docketra helps solo practitioners manage cases, draft documents, track
+          Docketra helps attorneys manage cases, draft documents, track
           time, and bill clients — all with an AI assistant that knows your
           practice inside and out.
         </p>
@@ -113,10 +116,16 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t bg-card">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Scale className="h-4 w-4" />
             <span>Docketra</span>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </div>
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Docketra. All rights reserved.

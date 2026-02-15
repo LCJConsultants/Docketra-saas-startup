@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,12 +59,14 @@ export function DocumentList({ documents }: DocumentListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
-    setDeletingId(id);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    setDeletingId(confirmDeleteId);
     try {
       startTransition(async () => {
-        await deleteDocumentAction(id);
+        await deleteDocumentAction(confirmDeleteId);
         router.refresh();
       });
     } catch (err) {
@@ -161,7 +164,7 @@ export function DocumentList({ documents }: DocumentListProps) {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={() => setConfirmDeleteId(doc.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
@@ -199,6 +202,14 @@ export function DocumentList({ documents }: DocumentListProps) {
           </Card>
         ))}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+        title="Delete document?"
+        description="This will permanently delete this document. This action cannot be undone."
+        onConfirm={handleDelete}
+      />
 
       {/* Document Viewer Dialog for AI Drafts */}
       <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>

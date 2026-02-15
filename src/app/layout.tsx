@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { validateEnv } from "@/lib/env";
 import "./globals.css";
+
+validateEnv();
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Docketra - AI-Powered Legal Practice Management",
   description:
-    "The modern practice management platform for solo attorneys. AI-powered document drafting, case management, billing, and more.",
+    "The modern practice management platform for attorneys. AI-powered document drafting, case management, billing, and more.",
 };
 
 export default function RootLayout({

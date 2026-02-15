@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Cloud, Mail, HardDrive, Check, Loader2, ExternalLink } from "lucide-react";
+import { Cloud, Mail, HardDrive, Check, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,9 +28,9 @@ interface IntegrationsClientProps {
 const integrations = [
   {
     id: "google" as const,
-    name: "Google (Drive + Gmail)",
+    name: "Google (Drive + Gmail + Calendar)",
     description:
-      "Connect your Google account to sync documents via Google Drive and send/receive emails through Gmail. One connection covers both services.",
+      "Connect your Google account to sync documents via Google Drive, send/receive emails through Gmail, and sync your calendar with Google Calendar.",
     icon: Cloud,
     authUrl: "/api/integrations/google/auth",
   },
@@ -40,7 +40,7 @@ const integrations = [
     description:
       "Connect your Microsoft account to send and receive emails through Outlook directly from Docketra.",
     icon: Mail,
-    authUrl: "/api/integrations/outlook/auth",
+    authUrl: null, // Coming soon
   },
   {
     id: "dropbox" as const,
@@ -61,6 +61,26 @@ export function IntegrationsClient({
 }: IntegrationsClientProps) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncCalendar = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/integrations/google/calendar/sync", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Calendar sync failed");
+      } else {
+        toast.success(`Synced: ${data.pushed} pushed, ${data.pulled} pulled`);
+      }
+    } catch {
+      toast.error("Calendar sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const connectionStatus: Record<string, boolean> = {
     google: googleConnected,
@@ -149,20 +169,41 @@ export function IntegrationsClient({
 
               <CardFooter className="flex justify-between">
                 {isConnected ? (
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDisconnect(integration.id)}
-                    disabled={isDisconnecting}
-                  >
-                    {isDisconnecting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Disconnecting...
-                      </>
-                    ) : (
-                      "Disconnect"
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDisconnect(integration.id)}
+                      disabled={isDisconnecting}
+                    >
+                      {isDisconnecting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Disconnecting...
+                        </>
+                      ) : (
+                        "Disconnect"
+                      )}
+                    </Button>
+                    {integration.id === "google" && (
+                      <Button
+                        variant="outline"
+                        onClick={handleSyncCalendar}
+                        disabled={syncing}
+                      >
+                        {syncing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sync Calendar
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 ) : (
                   <Button
                     onClick={() => handleConnect(integration.authUrl)}
