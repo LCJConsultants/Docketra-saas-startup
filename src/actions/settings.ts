@@ -121,10 +121,37 @@ export async function deleteAccountAction() {
   // Delete user data from all tables (cascade from profile)
   const admin = createAdminClient();
 
+  // Clean up storage files before deleting DB records
+  const { data: docs } = await admin
+    .from("documents")
+    .select("storage_path")
+    .eq("user_id", user.id);
+
+  if (docs && docs.length > 0) {
+    const paths = docs.map((d) => d.storage_path).filter(Boolean);
+    if (paths.length > 0) {
+      await admin.storage.from("documents").remove(paths);
+    }
+  }
+
+  // Also remove template files from storage
+  const { data: templates } = await admin
+    .from("document_templates")
+    .select("file_path")
+    .eq("user_id", user.id);
+
+  if (templates && templates.length > 0) {
+    const tplPaths = templates.map((t) => t.file_path).filter(Boolean);
+    if (tplPaths.length > 0) {
+      await admin.storage.from("documents").remove(tplPaths);
+    }
+  }
+
   // Delete in order to respect foreign keys
   await admin.from("notifications").delete().eq("user_id", user.id);
   await admin.from("time_entries").delete().eq("user_id", user.id);
   await admin.from("calendar_events").delete().eq("user_id", user.id);
+  await admin.from("document_templates").delete().eq("user_id", user.id);
   await admin.from("documents").delete().eq("user_id", user.id);
   await admin.from("invoices").delete().eq("user_id", user.id);
   await admin.from("cases").delete().eq("user_id", user.id);

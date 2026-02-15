@@ -76,12 +76,22 @@ export function DocumentList({ documents }: DocumentListProps) {
     }
   };
 
-  const handleView = (doc: Document) => {
+  const handleView = async (doc: Document) => {
     if (doc.source === "ai_draft" && doc.ocr_text) {
       setViewingDoc(doc);
     } else if (doc.storage_path) {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storage_path}`;
-      window.open(url, "_blank");
+      try {
+        const res = await fetch("/api/documents/signed-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storagePath: doc.storage_path }),
+        });
+        if (!res.ok) throw new Error("Failed to get download URL");
+        const { url } = await res.json();
+        window.open(url, "_blank");
+      } catch {
+        toast.error("Failed to open document");
+      }
     }
   };
 
