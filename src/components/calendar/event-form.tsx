@@ -18,6 +18,16 @@ interface EventFormProps {
   onSuccess?: () => void;
 }
 
+function toLocalDatetime(utcString: string): string {
+  const d = new Date(utcString);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function EventForm({ event, cases, onSuccess }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -29,6 +39,16 @@ export function EventForm({ event, cases, onSuccess }: EventFormProps) {
 
     try {
       const formData = new FormData(e.currentTarget);
+
+      // Convert local datetime to UTC ISO string for proper timezone handling
+      const startLocal = formData.get("start_time") as string;
+      if (startLocal) {
+        formData.set("start_time", new Date(startLocal).toISOString());
+      }
+      const endLocal = formData.get("end_time") as string;
+      if (endLocal) {
+        formData.set("end_time", new Date(endLocal).toISOString());
+      }
 
       if (isEditing) {
         await updateEventAction(event.id, formData);
@@ -98,7 +118,7 @@ export function EventForm({ event, cases, onSuccess }: EventFormProps) {
             id="start_time"
             name="start_time"
             type="datetime-local"
-            defaultValue={event?.start_time ? new Date(event.start_time).toISOString().slice(0, 16) : ""}
+            defaultValue={event?.start_time ? toLocalDatetime(event.start_time) : ""}
             required
           />
         </div>
@@ -108,7 +128,7 @@ export function EventForm({ event, cases, onSuccess }: EventFormProps) {
             id="end_time"
             name="end_time"
             type="datetime-local"
-            defaultValue={event?.end_time ? new Date(event.end_time).toISOString().slice(0, 16) : ""}
+            defaultValue={event?.end_time ? toLocalDatetime(event.end_time) : ""}
           />
         </div>
       </div>
