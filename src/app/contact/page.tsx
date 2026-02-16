@@ -47,10 +47,10 @@ export default function ContactPage() {
             </CardHeader>
             <CardContent>
               <a
-                href="mailto:support@docketra.com"
+                href="mailto:support@docketra.org"
                 className="text-primary hover:underline font-medium"
               >
-                support@docketra.com
+                support@docketra.org
               </a>
             </CardContent>
           </Card>
@@ -85,10 +85,10 @@ export default function ContactPage() {
             </CardHeader>
             <CardContent>
               <a
-                href="mailto:feedback@docketra.com"
+                href="mailto:feedback@docketra.org"
                 className="text-primary hover:underline font-medium"
               >
-                feedback@docketra.com
+                feedback@docketra.org
               </a>
             </CardContent>
           </Card>

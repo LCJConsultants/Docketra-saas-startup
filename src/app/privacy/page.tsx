@@ -141,8 +141,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">11. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
               For privacy-related questions or data requests, contact us at{" "}
-              <a href="mailto:privacy@docketra.com" className="text-primary hover:underline">
-                privacy@docketra.com
+              <a href="mailto:privacy@docketra.org" className="text-primary hover:underline">
+                privacy@docketra.org
               </a>.
             </p>
           </section>

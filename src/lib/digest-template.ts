@@ -104,7 +104,7 @@ export function buildDigestEmail(
       </table>`;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.docketra.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://docketra.org";
 
   return `
 <!DOCTYPE html>

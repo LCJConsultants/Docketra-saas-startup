@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     try {
       await resend.emails.send({
-        from: "Docketra <digest@docketra.com>",
+        from: "Docketra <digest@docketra.org>",
         to: profile.email,
         subject: `Daily Digest - ${format(now, "MMM d, yyyy")}`,
         html,

@@ -126,8 +126,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mb-3">11. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
               For questions about these Terms, contact us at{" "}
-              <a href="mailto:legal@docketra.com" className="text-primary hover:underline">
-                legal@docketra.com
+              <a href="mailto:legal@docketra.org" className="text-primary hover:underline">
+                legal@docketra.org
               </a>.
             </p>
           </section>

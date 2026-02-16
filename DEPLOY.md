@@ -20,7 +20,7 @@ Go to Project Settings > Environment Variables and add ALL of these:
 |----------|-------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://zgzjbprprbhzohmcgkfq.supabase.co` | Production, Preview, Development |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(from .env.local)* | Production, Preview, Development |
-| `NEXT_PUBLIC_APP_URL` | `https://yourdomain.com` | Production |
+| `NEXT_PUBLIC_APP_URL` | `https://docketra.org` | Production |
 | `NEXT_PUBLIC_APP_URL` | `https://docketra-saas-startup.vercel.app` | Preview |
 | `SUPABASE_SERVICE_ROLE_KEY` | *(from .env.local)* | Production, Preview |
 | `OPENAI_API_KEY` | *(from .env.local)* | Production, Preview |
@@ -60,9 +60,9 @@ Click **Deploy** in Vercel. The build should succeed.
 ## Step 4: Connect Custom Domain
 
 1. Go to Project Settings > Domains
-2. Add your domain (e.g. `app.docketra.com` or `docketra.com`)
+2. Add `docketra.org`
 3. Vercel will show DNS records to add at your domain registrar
-4. Add the records at your registrar (Namecheap, GoDaddy, etc.)
+4. Add the records at your registrar
 5. Wait for DNS propagation (usually 5-30 minutes)
 6. Vercel auto-provisions SSL certificate
 
@@ -72,30 +72,30 @@ Click **Deploy** in Vercel. The build should succeed.
 
 ### Supabase Auth Redirect URLs
 1. Go to Supabase Dashboard > Authentication > URL Configuration
-2. Set **Site URL** to: `https://yourdomain.com`
+2. Set **Site URL** to: `https://docketra.org`
 3. Add to **Redirect URLs**:
-   - `https://yourdomain.com/callback`
-   - `https://yourdomain.com/callback?next=/reset-password`
-   - `https://yourdomain.com/api/integrations/google/callback`
+   - `https://docketra.org/callback`
+   - `https://docketra.org/callback?next=/reset-password`
+   - `https://docketra.org/api/integrations/google/callback`
 
 ### Google OAuth Console
 1. Go to https://console.cloud.google.com/apis/credentials
 2. Edit the OAuth 2.0 Client ID
 3. Add **Authorized redirect URI**:
-   - `https://yourdomain.com/api/integrations/google/callback`
+   - `https://docketra.org/api/integrations/google/callback`
 4. Add **Authorized JavaScript origin**:
-   - `https://yourdomain.com`
+   - `https://docketra.org`
 
 ### Resend (Email)
 1. Go to https://resend.com/domains
-2. Add and verify your domain for sending emails
+2. Add and verify `docketra.org` for sending emails
 3. Update DNS records (SPF, DKIM) at your registrar
 
 ---
 
 ## Step 6: Verify
 
-- [ ] Landing page loads at your domain
+- [ ] Landing page loads at https://docketra.org
 - [ ] Sign up flow works (email sent, verification works)
 - [ ] Login works
 - [ ] Onboarding flow completes
