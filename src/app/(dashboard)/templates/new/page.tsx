@@ -134,8 +134,14 @@ export default function NewTemplatePage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to upload template");
+        let message = "Failed to upload template";
+        try {
+          const data = await response.json();
+          message = data.error || message;
+        } catch {
+          // Response wasn't JSON
+        }
+        throw new Error(message);
       }
 
       toast.success("Template uploaded successfully");
