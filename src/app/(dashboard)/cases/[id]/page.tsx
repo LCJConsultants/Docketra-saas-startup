@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCase } from "@/actions/cases";
+import { getEventsByCase } from "@/actions/calendar";
+import { getDocuments } from "@/actions/documents";
 import { PageHeader } from "@/components/shared/page-header";
 import { CaseTabs } from "@/components/cases/case-tabs";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   } catch {
     notFound();
   }
+
+  const [events, docsResult] = await Promise.all([
+    getEventsByCase(id),
+    getDocuments({ case_id: id }),
+  ]);
+  const documents = docsResult.data ?? [];
 
   const statusVariant: Record<string, "success" | "warning" | "secondary" | "outline"> = {
     open: "success",
@@ -177,7 +185,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
       )}
 
       {/* Tabs: Documents, Timeline, Billing */}
-      <CaseTabs caseId={caseData.id} />
+      <CaseTabs caseId={caseData.id} events={events} documents={documents} />
     </div>
   );
 }

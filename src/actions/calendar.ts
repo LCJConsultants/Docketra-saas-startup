@@ -59,6 +59,22 @@ export async function getUpcomingEvents(limit = 5) {
   return data;
 }
 
+export async function getEventsByCase(caseId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("id, title, event_type, start_time, end_time, location, all_day")
+    .eq("user_id", user.id)
+    .eq("case_id", caseId)
+    .order("start_time", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function createEventAction(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -127,6 +143,7 @@ export async function createEventAction(formData: FormData) {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  if (data.case_id) revalidatePath(`/cases/${data.case_id}`);
   return data;
 }
 
@@ -203,6 +220,8 @@ export async function updateEventAction(id: string, formData: FormData) {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  const caseId = parsed.case_id && parsed.case_id !== "none" ? parsed.case_id : null;
+  if (caseId) revalidatePath(`/cases/${caseId}`);
 }
 
 export async function deleteEventAction(id: string) {
